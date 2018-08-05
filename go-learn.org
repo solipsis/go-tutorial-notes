@@ -1,0 +1,99 @@
+* refactoring switch statements
+<2018-08-05 Sun 12:34>
+#+BEGIN_SRC go
+switch myEnum {
+	case One:
+		err := DoSomeOtherStuff()
+		if err != nil {
+			return err
+		}
+	case Two:
+		err := DoSomeMagicalStuff()
+		if err != nil {
+			return err
+		}
+	case Three:
+		err := DoSomeExoticStuff()
+		if err != nil {
+			return err
+		}
+	case Four:
+		err := DoSomeOtherStuff()
+		if err != nil {
+			return err
+		}
+}
+#+END_SRC
+-----------------------------------------------------------------
+refactor with map of functions
+#+BEGIN_SRC go
+var myMap = map[MyEnum]func() error{
+    One: doStuf(),
+    Two: doOtherStuff(),
+    Three: Potato(),
+}
+#+END_SRC
+---------------------------------------------------------------------
+Then you can remove switch entirely
+#+BEGIN_SRC go
+if myFunc, ok := myMap[myEnum]; ok {
+    err := myFunc()
+    if err != nil {
+        return err
+    }
+} else {
+    // default case goes here
+}
+#+END_SRC
+* auto reloading docker api
+<2018-08-05 Sun 01:34>
+Simple server
+#+BEGIN_SRC go
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Hello from the api")
+}
+
+func main() {
+	http.HandleFunc("/", handler)
+	log.Println("listening on 5000")
+	log.Fatal(http.ListenAndServe(":5000", nil))
+}
+#+END_SRC
+__________________________________________________________
+DockerFile
+Starts daemon watching the api directory
+#+BEGIN_SRC go
+FROM golang:1.10
+
+WORKDIR /go/src/play/dockerRelaod
+
+COPY . .
+
+RUN ["go", "get", "github.com/githubnemo/CompileDaemon"]
+
+ENTRYPOINT CompileDaemon -log-prefix=false -build="go build ./cmd/api/" -command="./api"
+#+END_SRC
+____________________________________________________________
+docker-compose file at root
+volume mount the project directory so the daemon picks up on local changes
+#+BEGIN_SRC go
+version: '3.0'
+
+services:
+    api:
+        image: api:latest
+        ports:
+            - 5000:5000
+        volumes:
+            - ./:/go/src/play/dockerRelaod
+
+#+END_SRC
+_________________________________________________________
